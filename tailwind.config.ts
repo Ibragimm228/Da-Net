@@ -18,19 +18,11 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        fredoka: ["Fredoka", "sans-serif"],
+        outfit: ["Outfit", "sans-serif"],
+      },
       colors: {
-        mint: {
-          50: "#f2fbf9",
-          100: "#d3f4ed",
-          200: "#a7e9dd",
-          300: "#74d4c4",
-          400: "#44b5a6",
-          500: "#2a9587",
-          600: "#1f766c",
-          700: "#1d5f58",
-          800: "#1b4c47",
-          900: "#1a403c",
-        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -55,6 +47,9 @@ export default {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+          mint: "hsl(var(--accent-mint))",
+          coral: "hsl(var(--accent-coral))",
+          yellow: "hsl(var(--accent-yellow))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
