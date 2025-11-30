@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,10 +6,18 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Dices, Copy, Check } from 'lucide-react';
 
+const ANIMATION_INTERVAL = 50; // ms
+const ANIMATION_STEPS = 10;
+const MAX_RESULT_COUNT = 50;
+
 interface NumberGeneratorProps {
   onResult: (result: string) => void;
 }
 
+/**
+ * A component for generating random numbers within a specified range.
+ * It features a "slot machine" style animation during generation.
+ */
 export const NumberGenerator = ({ onResult }: NumberGeneratorProps) => {
   const [min, setMin] = useState(1);
   const [max, setMax] = useState(100);
@@ -18,32 +26,44 @@ export const NumberGenerator = ({ onResult }: NumberGeneratorProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Effect to clean up the interval when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
   const generate = () => {
-    if (isGenerating) return;
+    if (isGenerating || min >= max) return;
     setIsGenerating(true);
+    setCopied(false);
     setResults([]);
 
-    const numbers: number[] = [];
-    for (let i = 0; i < count; i++) {
-      numbers.push(Math.floor(Math.random() * (max - min + 1)) + min);
-    }
+    const finalNumbers: number[] = Array.from({ length: count }, () => 
+      Math.floor(Math.random() * (max - min + 1)) + min
+    );
 
-    let current = 0;
-    const interval = setInterval(() => {
-      if (current < 10) {
-        setResults(
-          Array.from({ length: count }, () =>
-            Math.floor(Math.random() * (max - min + 1)) + min
-          )
+    let step = 0;
+    intervalRef.current = setInterval(() => {
+      if (step < ANIMATION_STEPS) {
+        const tempNumbers = Array.from({ length: count }, () =>
+          Math.floor(Math.random() * (max - min + 1)) + min
         );
-        current++;
+        setResults(tempNumbers);
+        step++;
       } else {
-        clearInterval(interval);
-        setResults(numbers);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+        setResults(finalNumbers);
         setIsGenerating(false);
-        onResult(numbers.join(', '));
+        onResult(finalNumbers.join(', '));
       }
-    }, 50);
+    }, ANIMATION_INTERVAL);
   };
 
   const copyResults = () => {
@@ -92,22 +112,18 @@ export const NumberGenerator = ({ onResult }: NumberGeneratorProps) => {
         </div>
 
         <div className="space-y-4 px-2">
-          <div className="space-y-2">
-            <Label htmlFor="count" className="font-fredoka text-lg">Количество чисел</Label>
-            <Input
-                id="count"
-                type="number"
-                value={count}
-                onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    if (val >= 0 && val <= 100) setCount(val);
-                }}
-                onBlur={() => {
-                    if (count < 1) setCount(1);
-                }}
-                className="text-center text-xl font-bold h-14 rounded-xl border-2 border-border bg-white focus-visible:ring-primary"
+            <div className="flex justify-between items-center">
+                <Label className="font-fredoka text-lg">Количество чисел</Label>
+                <div className="font-bold text-2xl font-mono bg-white py-2 px-4 rounded-xl border-2 border-border w-24 text-center">{count}</div>
+            </div>
+            <Slider
+                value={[count]}
+                onValueChange={(value) => setCount(value[0])}
+                min={1}
+                max={MAX_RESULT_COUNT}
+                step={1}
+                aria-label="Количество чисел"
             />
-          </div>
         </div>
       </div>
 
@@ -126,7 +142,7 @@ export const NumberGenerator = ({ onResult }: NumberGeneratorProps) => {
                   key={index}
                   initial={{ opacity: 0, y: 20, rotate: -10 }}
                   animate={{ opacity: 1, y: 0, rotate: 0 }}
-                  transition={{ delay: index * 0.1, type: "spring" }}
+                  transition={{ delay: index * 0.05, type: "spring", stiffness: 300, damping: 20 }}
                   className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center font-bold text-3xl md:text-4xl font-fredoka shadow-neo border-2 border-black ${
                     isGenerating ? 'bg-accent-yellow text-black' : 'bg-accent-coral text-black'
                   } transform hover:-translate-y-2 transition-transform`}
@@ -137,6 +153,7 @@ export const NumberGenerator = ({ onResult }: NumberGeneratorProps) => {
             </motion.div>
           ) : (
             <motion.div
+              key="placeholder"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-center text-muted-foreground"
@@ -151,7 +168,7 @@ export const NumberGenerator = ({ onResult }: NumberGeneratorProps) => {
       <div className="flex gap-4">
         <Button
           onClick={generate}
-          disabled={isGenerating}
+          disabled={isGenerating || min >= max}
           size="lg"
           className="bg-primary text-white px-12 py-6 text-xl rounded-2xl shadow-neo border-2 border-black hover:translate-y-1 hover:shadow-none transition-all duration-300 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-neo"
         >
